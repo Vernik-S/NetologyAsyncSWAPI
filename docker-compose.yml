@@ -1,7 +1,6 @@
 version: '3.9'
 
 
-
 services:
 
   db:
@@ -12,4 +11,5 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: netology_asyncio
+
 

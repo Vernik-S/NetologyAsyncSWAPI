@@ -140,7 +140,6 @@ async def main_tasks_gen():
         await conn.run_sync(Base.metadata.create_all)
         await conn.commit()
 
-
     async with aiohttp.ClientSession() as session_http:
         async with Session() as session_bd:
 
