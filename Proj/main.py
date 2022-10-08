@@ -9,18 +9,34 @@ from more_itertools import chunked
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, String
 import re
 from cache import AsyncLRU
 
-PGN = "postgresql+asyncpg://app:1234@127.0.0.1:5432/netology_asyncio"
+PGN = "postgresql+asyncpg://app:1234@127.0.0.1:5431/netology_asyncio"
 
 engine = create_async_engine(PGN)
 Base = declarative_base(bind=engine)
 Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-# class People(Base):
-#     id
+
+class People(Base):
+    __tablename__ = "people"
+    id = Column(Integer, primary_key=True)
+    birth_year = Column(String)
+    eye_color = Column(String)
+    films = Column(String)
+    gender = Column(String)
+    hair_color = Column(String)
+    height = Column(String)
+    homeworld = Column(String)
+    mass = Column(String)
+    name = Column(String)
+    skin_color = Column(String)
+    species = Column(String)
+    starships = Column(String)
+    vehicles = Column(String)
+
 
 CHUNK = 10
 
@@ -120,19 +136,48 @@ async def create_string_for_additional_data(urls, url, key, session):
 
 
 async def main_tasks_gen():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.commit()
+
+
     async with aiohttp.ClientSession() as session_http:
-        async for person in get_result(range(1, 201), session_http):
-            print(person)
-            if person[1] == 200:
-                person_json = person[2]
-                films_string = await create_string_for_additional_data(person_json["films"], "films", "title", session_http)
-                homeworld_string = await create_string_for_additional_data([person_json["homeworld"]], "planets", "name", session_http)
-                species_string = await create_string_for_additional_data(person_json["species"], "species", "name", session_http)
-                starships_string = await create_string_for_additional_data(person_json["starships"], "starships", "name", session_http)
-                vehicles_string = await create_string_for_additional_data(person_json["vehicles"], "vehicles", "name", session_http)
+        async with Session() as session_bd:
 
-                print(homeworld_string )
+            async for person in get_result(range(1, 201), session_http):
+                print(person)
+                if person[1] == 200:
+                    person_json = person[2]
+                    films_string = await create_string_for_additional_data(person_json["films"], "films", "title",
+                                                                           session_http)
+                    homeworld_string = await create_string_for_additional_data([person_json["homeworld"]], "planets",
+                                                                               "name", session_http)
+                    species_string = await create_string_for_additional_data(person_json["species"], "species", "name",
+                                                                             session_http)
+                    starships_string = await create_string_for_additional_data(person_json["starships"], "starships",
+                                                                               "name", session_http)
+                    vehicles_string = await create_string_for_additional_data(person_json["vehicles"], "vehicles",
+                                                                              "name", session_http)
 
+                    session_bd.add(People(
+                        id=person[0],
+                        birth_year=person_json["birth_year"],
+                        eye_color=person_json["eye_color"],
+                        films=films_string,
+                        gender=person_json["gender"],
+                        hair_color=person_json["hair_color"],
+                        height=person_json["height"],
+                        homeworld=homeworld_string,
+                        mass=person_json["mass"],
+                        name=person_json["name"],
+                        skin_color=person_json["skin_color"],
+                        species=species_string,
+                        starships=starships_string,
+                        vehicles=vehicles_string,
+
+                    ))
+
+                    await session_bd.commit()
 
 
 start = datetime.now()
